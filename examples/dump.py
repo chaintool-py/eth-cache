@@ -20,7 +20,7 @@ from chainlib.eth.tx import (
         )
 from chainlib.interface import ChainInterface
 from chainsyncer.backend.memory import MemBackend
-from chainsyncer.driver.thread import ThreadedHistorySyncer
+from chainsyncer.driver.threadpool import ThreadPoolHistorySyncer
 
 # local imports
 from eth_cache.account import AccountRegistry
@@ -30,7 +30,7 @@ from eth_cache.store import PointerHexDir
 logging.basicConfig(level=logging.INFO)
 logg = logging.getLogger()
 logging.getLogger('eth_cache.store').setLevel(logging.DEBUG)
-logging.getLogger('chainsyncer.driver.thread').setLevel(logging.DEBUG)
+logging.getLogger('chainsyncer.driver.threadpool').setLevel(logging.DEBUG)
 logging.getLogger('chainsyncer.driver.head').setLevel(logging.DEBUG)
 #logging.getLogger('chainsyncer.backend.memory').setLevel(logging.DEBUG)
 
@@ -55,15 +55,17 @@ store = TxFileStore(chain_spec, backend)
 
 def conn_factory():
     return EthHTTPConnection('http://localhost:8545')
+    #return EthHTTPConnection('http://localhost:63545')
 rpc = conn_factory()
 
 #start = 8534365
 start = 12423900
+#start = 0
 
 o = block_latest()
 r = rpc.do(o)
 stop = int(r, 16)
-stop = start + 50
+stop = start + 3
 
 syncer_backend = MemBackend(chain_spec, None, target_block=stop)
 syncer_backend.set(start, 0)
@@ -118,8 +120,8 @@ class MonitorFilter:
 fltr = StoreFilter(store, account_registry)
 
 if __name__ == '__main__':
-    ThreadedHistorySyncer.yield_delay = 0
-    syncer = ThreadedHistorySyncer(conn_factory, 50, syncer_backend, chain_interface)
+    ThreadPoolHistorySyncer.yield_delay = 0
+    syncer = ThreadPoolHistorySyncer(conn_factory, 2, syncer_backend, chain_interface)
     syncer.add_filter(MonitorFilter())
     syncer.add_filter(fltr)
     syncer.loop(0, rpc)
