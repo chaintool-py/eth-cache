@@ -57,9 +57,14 @@ class TxFileStore:
         self.chain_spec = chain_spec
 
 
-    def put(self, block, tx, addresses, attrs={}):
+    def put(self, block, tx, addresses=[], attrs={}):
+        tx_src = tx.as_dict()
+        tx_raw = pack(tx_src, self.chain_spec)
+
+        if len(addresses) == 0:
+            self.backend.add(bytes.fromhex(tx.hash), tx_raw, pointers={})
+            return
+
         for address in addresses:
-            tx_src = tx.as_dict()
-            tx_raw = pack(tx_src, self.chain_spec)
             filename = '{}_{}_{}'.format(block.number, tx.index, strip_0x(tx.hash))
             self.backend.add(bytes.fromhex(tx.hash), tx_raw, pointers={'address': [strip_0x(address),filename]})

@@ -16,10 +16,17 @@ from chainlib.eth.tx import (
         transaction,
         Tx,
         )
+from chainlib.eth.block import (
+        Block,
+        block_by_hash,
+        )
 from hexathon import strip_0x
 
 # local imports
-from eth_cache.store import PointerHexDir
+from eth_cache.store import (
+        PointerHexDir,
+        TxFileStore,
+        )
 
 logging.basicConfig(level=logging.WARNING)
 logg = logging.getLogger()
@@ -73,7 +80,14 @@ if __name__ == '__main__':
     r = rpc.do(o)
     tx.apply_receipt(r)
 
+    rcpt = Tx.src_normalize(r)
+    o = block_by_hash(rcpt['block_hash'])
+    r = rpc.do(o)
+    block = Block(r)
+    tx.apply_block(block)
+
     store_backend = PointerHexDir(data_dir, 32)
     store_backend.register_pointer('address')
-    #store = TxFileStore(chain_spec, backend)
-    store_backend.add(bytes.fromhex(strip_0x(tx_hash)), tx_raw)
+    store = TxFileStore(chain_spec, store_backend)
+    #store_backend.add(bytes.fromhex(strip_0x(tx_hash)), tx_raw)
+    store.put(block, tx, [])
