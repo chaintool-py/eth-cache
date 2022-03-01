@@ -29,30 +29,37 @@ class FileStore:
         tx_hash_dirnormal = strip_0x(tx.hash).upper()
         tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
         self.tx_raw_dir.add(tx_hash_bytes, raw)
+        addresses = []
         if self.address_rules != None:
             for a in tx.outputs + tx.inputs:
-                if self.address_rules.apply_rules_addresses(a, a, tx.hash):
-                    a_hex = strip_0x(a).upper()
-                    a = bytes.fromhex(a_hex)
-                    self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
-                    dirpath = self.address_dir.to_filepath(a_hex)
-                    fp = os.path.join(dirpath, '.start')
-                    num = tx.block.number
-                    num_compare = 0
-                    try:
-                        f = open(fp, 'rb')
-                        r = f.read(8)
-                        f.close()
-                        num_compare = int.from_bytes(r, 'big')
-                    except FileNotFoundError:
-                        pass
+                if a not in addresses:
+                    addresses.append(a)
+        else:
+            for a in tx.outputs + tx.inputs:
+                addresses.append(a)
 
-                    if num_compare == 0 or num < num_compare:
-                        logg.debug('recoding new start block {} for {}'.format(num, a))
-                        num_bytes = num.to_bytes(8, 'big')
-                        f = open(fp, 'wb')
-                        f.write(num_bytes)
-                        f.close()
+        for a in addresses:
+            a_hex = strip_0x(a).upper()
+            a = bytes.fromhex(a_hex)
+            self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
+            dirpath = self.address_dir.to_filepath(a_hex)
+            fp = os.path.join(dirpath, '.start')
+            num = tx.block.number
+            num_compare = 0
+            try:
+                f = open(fp, 'rb')
+                r = f.read(8)
+                f.close()
+                num_compare = int.from_bytes(r, 'big')
+            except FileNotFoundError:
+                pass
+
+            if num_compare == 0 or num < num_compare:
+                logg.debug('recoding new start block {} for {}'.format(num, a))
+                num_bytes = num.to_bytes(8, 'big')
+                f = open(fp, 'wb')
+                f.write(num_bytes)
+                f.close()
 
         if include_data:
             src = json.dumps(tx.src()).encode('utf-8')
@@ -119,15 +126,6 @@ class FileStore:
 
 
     def __init__(self, chain_spec, cache_root=default_base_dir, address_rules=None):
-#        self.cache_root = os.path.join(
-#            cache_root,
-#            'eth_cache',
-#            chain_spec.engine(),
-#            chain_spec.fork(),
-#            str(chain_spec.chain_id()),
-#            )
-        #self.cache_root = os.path.realpath(self.cache_root)
-        #self.chain_dir = chain_dir_for(chain_spec, self.cache_root)
         self.chain_dir = chain_dir_for(chain_spec, cache_root)
         self.cache_dir = self.chain_dir
         self.block_src_path = os.path.join(self.cache_dir, 'block', 'src')
