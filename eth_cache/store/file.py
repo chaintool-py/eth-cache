@@ -149,4 +149,4 @@ class FileStore:
 
 
     def __str__(self):
-        return 'FileStore: root {}'.format(self.cache_root)
+        return 'FileStore: root {}'.format(self.cache_dir)
