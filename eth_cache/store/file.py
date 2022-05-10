@@ -25,7 +25,7 @@ def chain_dir_for(chain_spec, base_dir=default_base_dir):
 class FileStore:
 
     def put_tx(self, tx, include_data=False):
-        raw = pack(tx.src(), self.chain_spec)
+        raw = pack(tx.src, self.chain_spec)
         tx_hash_dirnormal = strip_0x(tx.hash).upper()
         tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
         self.tx_raw_dir.add(tx_hash_bytes, raw)
@@ -62,10 +62,10 @@ class FileStore:
                 f.close()
 
         if include_data:
-            src = json.dumps(tx.src()).encode('utf-8')
+            src = json.dumps(tx.src).encode('utf-8')
             self.tx_dir.add(bytes.fromhex(strip_0x(tx.hash)), src)
 
-            rcpt_src = tx.rcpt_src()
+            rcpt_src = tx.result.src
             logg.debug('rcpt {}'.format(rcpt_src))
             if rcpt_src != None:
                 rcpt_src = json.dumps(rcpt_src).encode('utf-8')
@@ -79,7 +79,7 @@ class FileStore:
         num_bytes = block.number.to_bytes(8, 'big')
         self.block_hash_dir.add(hash_bytes, num_bytes)
         if include_data:
-            src = json.dumps(block.src()).encode('utf-8')
+            src = json.dumps(block.src).encode('utf-8')
             self.block_src_dir.add(hash_bytes, src)
 
 
