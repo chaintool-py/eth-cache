@@ -64,10 +64,9 @@ class FileStore:
         if include_data:
             src = json.dumps(tx.src).encode('utf-8')
             self.tx_dir.add(bytes.fromhex(strip_0x(tx.hash)), src)
-
-            rcpt_src = tx.result.src
-            logg.debug('rcpt {}'.format(rcpt_src))
-            if rcpt_src != None:
+    
+            if tx.result != None:
+                rcpt_src = tx.result.src
                 rcpt_src = json.dumps(rcpt_src).encode('utf-8')
                 self.rcpt_dir.add(bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
 
