@@ -1,3 +1,5 @@
+- 0.2.0
+	* Upgrade chainlib
 - 0.1.6
 	* Do not crash when result member not set on tx
 - 0.1.5
