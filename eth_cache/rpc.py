@@ -25,7 +25,7 @@ class CacheRPC:
                 j = self.store.get_block_number(v)
                 r = json.loads(j)
                 logg.debug('using cached block {} -> {}'.format(v, r['hash']))
-            except FileNotFoundError:
+            except FileNotFoundError as e:
                 pass
         elif req['method'] == 'eth_getBlockByHash':
             block_hash = req['params'][0]
