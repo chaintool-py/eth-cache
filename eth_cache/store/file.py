@@ -14,6 +14,7 @@ from leveldir.hex import HexDir
 
 # local imports
 from eth_cache.store.fs import FsStore
+from eth_cache.store.base import StoreAction
 
 logg = logging.getLogger(__name__)
 
@@ -25,7 +26,8 @@ class FileStore(FsStore):
         raw = pack(tx.src, self.chain_spec)
         tx_hash_dirnormal = strip_0x(tx.hash).upper()
         tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
-        self.tx_raw_dir.add(tx_hash_bytes, raw)
+        #self.tx_raw_dir.add(tx_hash_bytes, raw)
+        self.add(StoreAction.TX_RAW, tx_hash_bytes, raw)
         addresses = []
         if self.address_rules != None:
             for a in tx.outputs + tx.inputs:
@@ -38,8 +40,11 @@ class FileStore(FsStore):
         for a in addresses:
             a_hex = strip_0x(a).upper()
             a = bytes.fromhex(a_hex)
-            self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
-            dirpath = self.address_dir.to_filepath(a_hex)
+            #self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
+            address_dir_adder = self.adder[StoreAction.ADDRESS]
+            address_dir_adder.add_dir(tx_hash_dirnormal, a, b'')
+            #dirpath = self.address_dir.to_filepath(a_hex)
+            dirpath = address_dir_adder.to_filepath(a_hex)
             fp = os.path.join(dirpath, '.start')
             num = tx.block.number
             num_compare = 0
@@ -60,27 +65,33 @@ class FileStore(FsStore):
 
         if include_data:
             src = json.dumps(tx.src).encode('utf-8')
-            self.tx_dir.add(bytes.fromhex(strip_0x(tx.hash)), src)
+            #self.tx_dir.add(bytes.fromhex(strip_0x(tx.hash)), src)
+            self.add(StoreAction.TX, bytes.fromhex(strip_0x(tx.hash)), src)
     
             if tx.result != None:
                 rcpt_src = tx.result.src
                 rcpt_src = json.dumps(rcpt_src).encode('utf-8')
-                self.rcpt_dir.add(bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
+                #self.rcpt_dir.add(bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
+                self.add(StoreAction.RCPT, bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
 
 
 
     def put_block(self, block, include_data=False):
         hash_bytes = bytes.fromhex(strip_0x(block.hash))
-        self.block_num_dir.add(block.number, hash_bytes)
+        #self.block_num_dir.add(block.number, hash_bytes)
+        self.add(StoreAction.BLOCK_NUM, block.number, hash_bytes)
         num_bytes = block.number.to_bytes(8, 'big')
-        self.block_hash_dir.add(hash_bytes, num_bytes)
+        #self.block_hash_dir.add(hash_bytes, num_bytes)
+        self.add(StoreAction.BLOCK_HASH, hash_bytes, num_bytes)
         if include_data:
             src = json.dumps(block.src).encode('utf-8')
-            self.block_src_dir.add(hash_bytes, src)
+            #self.block_src_dir.add(hash_bytes, src)
+            self.add(StoreAction.BLOCK, hash_bytes, src)
 
 
     def get_block_number(self, block_number):
-        fp = self.block_num_dir.to_filepath(block_number)
+        #fp = self.block_num_dir.to_filepath(block_number)
+        fp = self.to_filepath(StoreAction.BLOCK_NUM, block_number)
         f = open(fp, 'rb')
         r = f.read()
         f.close()
@@ -88,7 +99,8 @@ class FileStore(FsStore):
 
 
     def get_block(self, block_hash):
-        fp = self.block_src_dir.to_filepath(block_hash)
+        #fp = self.block_src_dir.to_filepath(block_hash)
+        fp = self.to_filepath(StoreAction.BLOCK, block_hash)
         f = open(fp, 'rb')
         r = f.read()
         f.close()
@@ -96,7 +108,8 @@ class FileStore(FsStore):
 
 
     def get_tx(self, tx_hash):
-        fp = self.tx_dir.to_filepath(tx_hash)
+        #fp = self.tx_dir.to_filepath(tx_hash)
+        fp = self.to_filepath(StoreAction.TX, tx_hash)
         f = open(fp, 'rb')
         r = f.read()
         f.close()
@@ -104,7 +117,8 @@ class FileStore(FsStore):
 
 
     def get_rcpt(self, tx_hash):
-        fp = self.rcpt_dir.to_filepath(tx_hash)
+        #fp = self.rcpt_dir.to_filepath(tx_hash)
+        fp = self.to_filepath(StoreAction.RCPT, tx_hash)
         f = open(fp, 'rb')
         r = f.read()
         f.close()
@@ -112,7 +126,8 @@ class FileStore(FsStore):
 
 
     def get_address_tx(self, address):
-        fp = self.address_dir.to_filepath(address)
+        #fp = self.address_dir.to_filepath(address)
+        fp = self.to_filepath(StoreAction.ADDRESS, address)
         tx_hashes = []
         for tx_hash in os.listdir(fp):
             if tx_hash[0] == '.':
@@ -123,14 +138,22 @@ class FileStore(FsStore):
 
     def __init__(self, chain_spec, cache_root=None, address_rules=None):
         super(FileStore, self).__init__(chain_spec, cache_root=cache_root, address_rules=address_rules)
-        self.block_src_dir = HexDir(self.block_src_path, 32, levels=2)
-        self.block_num_dir = NumDir(self.block_num_path, [100000, 1000])
-        self.block_hash_dir = HexDir(self.block_hash_path, 32, levels=2)
-        self.tx_dir = HexDir(self.tx_path, 32, levels=2)
-        self.tx_raw_dir = HexDir(self.tx_raw_path, 32, levels=2)
-        self.rcpt_dir = HexDir(self.rcpt_path, 32, levels=2)
-        self.rcpt_raw_dir = HexDir(self.rcpt_raw_path, 32, levels=2)
-        self.address_dir = HexDir(self.address_path, 20, levels=2)
+        block_src_dir = HexDir(self.block_src_path, 32, levels=2)
+        self.register_adder(StoreAction.BLOCK, block_src_dir)
+        block_num_dir = NumDir(self.block_num_path, [100000, 1000])
+        self.register_adder(StoreAction.BLOCK_NUM, block_num_dir)
+        block_hash_dir = HexDir(self.block_hash_path, 32, levels=2)
+        self.register_adder(StoreAction.BLOCK_HASH, block_hash_dir)
+        tx_dir = HexDir(self.tx_path, 32, levels=2)
+        self.register_adder(StoreAction.TX, tx_dir)
+        tx_raw_dir = HexDir(self.tx_raw_path, 32, levels=2)
+        self.register_adder(StoreAction.TX_RAW, tx_raw_dir)
+        rcpt_dir = HexDir(self.rcpt_path, 32, levels=2)
+        self.register_adder(StoreAction.RCPT, rcpt_dir)
+        rcpt_raw_dir = HexDir(self.rcpt_raw_path, 32, levels=2)
+        self.register_adder(StoreAction.RCPT_RAW, rcpt_raw_dir)
+        address_dir = HexDir(self.address_path, 20, levels=2)
+        self.register_adder(StoreAction.ADDRESS, address_dir)
 
 
     def __str__(self):

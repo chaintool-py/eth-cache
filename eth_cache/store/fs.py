@@ -3,6 +3,7 @@ import os
 
 # local imports
 from eth_cache.store.base import Store
+from eth_cache.store.base import StoreAction
 
 
 default_base_dir = '/var/lib'
@@ -20,12 +21,11 @@ class FsStore(Store):
         self.chain_dir = chain_dir_for(chain_spec, cache_root)
         self.cache_dir = self.chain_dir
         os.makedirs(self.cache_dir, exist_ok=True)
-        self.block_src_path = os.path.join(self.cache_dir, 'block', 'src')
-        self.block_num_path = os.path.join(self.cache_dir, 'block', 'num')
-        self.block_hash_path = os.path.join(self.cache_dir, 'block', 'hash')
-        self.tx_path = os.path.join(self.cache_dir, 'tx', 'src')
-        self.tx_raw_path = os.path.join(self.cache_dir, 'tx', 'raw')
-        self.rcpt_path = os.path.join(self.cache_dir, 'rcpt', 'src')
-        self.rcpt_raw_path = os.path.join(self.cache_dir, 'rcpt', 'raw')
-        self.address_path = os.path.join(self.cache_dir, 'address')
-
+        self.block_src_path = os.path.join(self.cache_dir, StoreAction.BLOCK.value)
+        self.block_num_path = os.path.join(self.cache_dir, StoreAction.BLOCK_NUM.value)
+        self.block_hash_path = os.path.join(self.cache_dir, StoreAction.BLOCK_HASH.value)
+        self.tx_path = os.path.join(self.cache_dir, StoreAction.TX.value)
+        self.tx_raw_path = os.path.join(self.cache_dir, StoreAction.TX_RAW.value)
+        self.rcpt_path = os.path.join(self.cache_dir, StoreAction.RCPT.value)
+        self.rcpt_raw_path = os.path.join(self.cache_dir, StoreAction.RCPT_RAW.value)
+        self.address_path = os.path.join(self.cache_dir, StoreAction.ADDRESS.value)
