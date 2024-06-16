@@ -22,6 +22,12 @@ logg = logging.getLogger(__name__)
 
 class FileStore(FsStore):
 
+
+    def add_address_dir(self, dirhsh, address):
+        address_dir_adder = self.adder[StoreAction.ADDRESS]
+        address_dir_adder.add_dir(dirhsh, address, b'')
+
+
     def put_tx(self, tx, include_data=False):
         raw = pack(tx.src, self.chain_spec)
         tx_hash_dirnormal = strip_0x(tx.hash).upper()
@@ -41,10 +47,12 @@ class FileStore(FsStore):
             a_hex = strip_0x(a).upper()
             a = bytes.fromhex(a_hex)
             #self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
-            address_dir_adder = self.adder[StoreAction.ADDRESS]
-            address_dir_adder.add_dir(tx_hash_dirnormal, a, b'')
+            #address_dir_adder = self.adder[StoreAction.ADDRESS]
+            #address_dir_adder.add_dir(tx_hash_dirnormal, a, b'')
+            self.add_address_dir(tx_hash_dirnormal, a)
             #dirpath = self.address_dir.to_filepath(a_hex)
-            dirpath = address_dir_adder.to_filepath(a_hex)
+            #dirpath = address_dir_adder.to_filepath(a_hex)
+            dirpath = self.to_filepath(StoreAction.ADDRESS, a_hex)
             fp = os.path.join(dirpath, '.start')
             num = tx.block.number
             num_compare = 0
