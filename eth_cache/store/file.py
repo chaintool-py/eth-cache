@@ -12,17 +12,14 @@ from chainlib.eth.tx import (
 from leveldir.numeric import NumDir
 from leveldir.hex import HexDir
 
+# local imports
+from eth_cache.store.fs import FsStore
+
 logg = logging.getLogger(__name__)
 
-default_base_dir = '/var/lib'
 
 
-def chain_dir_for(chain_spec, base_dir=default_base_dir):
-    chain_dir = os.path.join(base_dir, str(chain_spec).replace(':', '/'))
-    return os.path.join(chain_dir, 'eth_cache')
-
-
-class FileStore:
+class FileStore(FsStore):
 
     def put_tx(self, tx, include_data=False):
         raw = pack(tx.src, self.chain_spec)
@@ -124,27 +121,16 @@ class FileStore:
         return tx_hashes
 
 
-    def __init__(self, chain_spec, cache_root=default_base_dir, address_rules=None):
-        self.chain_dir = chain_dir_for(chain_spec, cache_root)
-        self.cache_dir = self.chain_dir
-        self.block_src_path = os.path.join(self.cache_dir, 'block', 'src')
+    def __init__(self, chain_spec, cache_root=None, address_rules=None):
+        super(FileStore, self).__init__(chain_spec, cache_root=cache_root, address_rules=address_rules)
         self.block_src_dir = HexDir(self.block_src_path, 32, levels=2)
-        self.block_num_path = os.path.join(self.cache_dir, 'block', 'num')
         self.block_num_dir = NumDir(self.block_num_path, [100000, 1000])
-        self.block_hash_path = os.path.join(self.cache_dir, 'block', 'hash')
         self.block_hash_dir = HexDir(self.block_hash_path, 32, levels=2)
-        self.tx_path = os.path.join(self.cache_dir, 'tx', 'src')
-        self.tx_raw_path = os.path.join(self.cache_dir, 'tx', 'raw')
         self.tx_dir = HexDir(self.tx_path, 32, levels=2)
         self.tx_raw_dir = HexDir(self.tx_raw_path, 32, levels=2)
-        self.rcpt_path = os.path.join(self.cache_dir, 'rcpt', 'src')
-        self.rcpt_raw_path = os.path.join(self.cache_dir, 'rcpt', 'raw')
         self.rcpt_dir = HexDir(self.rcpt_path, 32, levels=2)
         self.rcpt_raw_dir = HexDir(self.rcpt_raw_path, 32, levels=2)
-        self.address_path = os.path.join(self.cache_dir, 'address')
         self.address_dir = HexDir(self.address_path, 20, levels=2)
-        self.chain_spec = chain_spec
-        self.address_rules = address_rules
 
 
     def __str__(self):
