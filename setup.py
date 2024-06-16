@@ -1,5 +1,5 @@
 from setuptools import setup
-import configparser
+#import configparser
 import os
 
 

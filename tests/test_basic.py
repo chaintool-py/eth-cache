@@ -6,64 +6,38 @@ import logging
 import json
 
 # external imports
-from chainlib.chain import ChainSpec
+from chainlib.eth.address import is_same_address
+from hexathon import strip_0x
+from chainlib.eth.nonce import RPCNonceOracle
 from chainlib.eth.gas import (
         Gas,
         OverrideGasOracle,
-        )
-from chainlib.eth.nonce import RPCNonceOracle
-from chainlib.eth.unittest.ethtester import EthTesterCase
-from chainlib.eth.tx import (
-        transaction,
-        receipt,
-        TxFormat,
-        Tx,
         )
 from chainlib.eth.block import (
         block_by_hash,
         block_by_number,
         Block,
         )
-from chainlib.eth.address import is_same_address
-from hexathon import strip_0x
-
+from chainlib.eth.tx import (
+        transaction,
+        Tx,
+        )
+        
 # local imports
 from eth_cache.store.file import FileStore
 from eth_cache.rpc import CacheRPC
+from tests.util import TestCache
+
 
 logging.basicConfig(level=logging.DEBUG)
 logg = logging.getLogger()
 
 
-class TestCache(EthTesterCase):
+class TestCacheBasic(TestCache):
 
     def setUp(self):
-        super(TestCache, self).setUp()
-        fp = tempfile.mkdtemp()
-        self.cache_dir = fp
-
-        class Applier:
-            def apply_rules_addresses(self, sender, recipient, address):
-                return True
-
-        self.store = FileStore(self.chain_spec, cache_root=self.cache_dir, address_rules=Applier())
-        nonce_oracle = RPCNonceOracle(self.accounts[0], self.rpc)
-        gas_oracle = OverrideGasOracle(price=100000000000, limit=30000)
-        c = Gas(self.chain_spec, signer=self.signer, nonce_oracle=nonce_oracle, gas_oracle=gas_oracle)
-        (tx_hash, o) = c.create(self.accounts[0], self.accounts[1], 1024)
-        r = self.rpc.do(o)
-
-        o = transaction(tx_hash)
-        tx_src = self.rpc.do(o)
-
-        o = receipt(tx_hash)
-        rcpt_src = self.rpc.do(o)
-
-        o = block_by_hash(tx_src['block_hash'])
-        block_src = self.rpc.do(o)
-
-        self.block = Block(block_src)
-        self.tx = Tx(tx_src, block=self.block, rcpt=rcpt_src)
+        super(TestCacheBasic, self).setUp()
+        self.store = FileStore(self.chain_spec, cache_root=self.cache_dir, address_rules=self.address_rules)
 
 
     def tearDown(self):
