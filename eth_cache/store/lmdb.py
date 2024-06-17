@@ -12,37 +12,64 @@ from chainlib.eth.tx import (
         )
 
 # local imports
+from . import StoreAction
 from eth_cache.store.fs import FsStore
 
 logg = logging.getLogger(__name__)
 
 
+def to_path_key(path, k):
+    if type(k) != bytes:
+        k = k.encode('utf-8')
+    if path[len(path)-1] != '/':
+        path += '/'
+    return path.encode('utf-8') + k
 
+
+class LmdbStoreAdder:
+
+    def __init__(self, action, db):
+        self.action = action
+        self.db = db
+
+
+    def add(self, k, v):
+        print("adding {} {} {}\n".format(self.action, k, v))
+        dbk = to_path_key(self.action.value, k)
+        with self.db.begin(write=True) as tx:
+            tx.put(dbk, v)
+
+    
 class LmdbStore(FsStore):
 
     def __init__(self, chain_spec, cache_root=None, address_rules=None):
         super(LmdbStore, self).__init__(chain_spec, cache_root=cache_root, address_rules=address_rules)
         self.db = lmdb.open(self.cache_dir, create=True)
-
-
-    def __to_path_key(self, path, k):
-        if path[len(path)-1] != '/':
-            path += '/'
-        return path.encode('utf-8') + k
+        for action in StoreAction:
+            self.register_adder(action, LmdbStoreAdder(action, self.db))
 
 
     def put_tx(self, tx, include_data=False):
-        raw = pack(tx.src, self.chain_spec)
-        tx_hash_dirnormal = strip_0x(tx.hash).upper()
-        tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
-        k = self.__to_path_key('tx_raw', tx_hash_bytes)
-        with self.db.begin(write=True) as tx:
-            tx.put(k, raw)
+        super(LmdbStore, self).put_tx(tx, include_data=include_data)
+#        raw = pack(tx.src, self.chain_spec)
+#        tx_hash_dirnormal = strip_0x(tx.hash).upper()
+#        tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
+#        k = self.__to_path_key('tx_raw', tx_hash_bytes)
+#        with self.db.begin(write=True) as tx:
+#            tx.put(k, raw)
 
 
     def get_tx(self, tx_hash):
-        self.__to_path_key(self, path, key)
+        print("getting {}\n".format(tx_hash))
+        k = bytes.fromhex(tx_hash)
+        k = to_path_key(StoreAction.TX.value, k) #self.adder[Store.ActionTX].get()
+        with self.db.begin() as tx:
+            return tx.get(k)
+
+
+    def put_address(self, tx, address):
+        pass
 
 
     def __str__(self):
-        return 'RockDbStore: root {}'.format(self.cache_dir)
+        return 'LmdbStore: root {}'.format(self.cache_dir)

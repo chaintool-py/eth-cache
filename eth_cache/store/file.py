@@ -7,7 +7,6 @@ import logging
 from hexathon import strip_0x
 from chainlib.eth.tx import (
         Tx,
-        pack,
         )
 from leveldir.numeric import NumDir
 from leveldir.hex import HexDir
@@ -19,7 +18,6 @@ from eth_cache.store.base import StoreAction
 logg = logging.getLogger(__name__)
 
 
-
 class FileStore(FsStore):
 
 
@@ -28,60 +26,40 @@ class FileStore(FsStore):
         address_dir_adder.add_dir(dirhsh, address, b'')
 
 
+    def put_address(self, tx, address):
+        a_hex = strip_0x(address).upper()
+        a = bytes.fromhex(a_hex)
+        #self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
+        #address_dir_adder = self.adder[StoreAction.ADDRESS]
+        #address_dir_adder.add_dir(tx_hash_dirnormal, a, b'')
+        #self.add_address_dir(tx_hash_dirnormal, a)
+        tx_hash = strip_0x(tx.hash).upper()
+        self.add_address_dir(tx_hash, a)
+        #dirpath = self.address_dir.to_filepath(a_hex)
+        #dirpath = address_dir_adder.to_filepath(a_hex)
+        dirpath = self.to_filepath(StoreAction.ADDRESS, a_hex)
+        fp = os.path.join(dirpath, '.start')
+        num = tx.block.number
+        num_compare = 0
+        try:
+            f = open(fp, 'rb')
+            r = f.read(8)
+            f.close()
+            num_compare = int.from_bytes(r, 'big')
+        except FileNotFoundError:
+            pass
+
+        if num_compare == 0 or num < num_compare:
+            logg.debug('recoding new start block {} for {}'.format(num, a))
+            num_bytes = num.to_bytes(8, 'big')
+            f = open(fp, 'wb')
+            f.write(num_bytes)
+            f.close()
+
+
     def put_tx(self, tx, include_data=False):
-        raw = pack(tx.src, self.chain_spec)
-        tx_hash_dirnormal = strip_0x(tx.hash).upper()
-        tx_hash_bytes = bytes.fromhex(tx_hash_dirnormal)
-        #self.tx_raw_dir.add(tx_hash_bytes, raw)
-        self.add(StoreAction.TX_RAW, tx_hash_bytes, raw)
-        addresses = []
-        if self.address_rules != None:
-            for a in tx.outputs + tx.inputs:
-                if a not in addresses:
-                    addresses.append(a)
-        else:
-            for a in tx.outputs + tx.inputs:
-                addresses.append(a)
-
-        for a in addresses:
-            a_hex = strip_0x(a).upper()
-            a = bytes.fromhex(a_hex)
-            #self.address_dir.add_dir(tx_hash_dirnormal, a, b'')
-            #address_dir_adder = self.adder[StoreAction.ADDRESS]
-            #address_dir_adder.add_dir(tx_hash_dirnormal, a, b'')
-            self.add_address_dir(tx_hash_dirnormal, a)
-            #dirpath = self.address_dir.to_filepath(a_hex)
-            #dirpath = address_dir_adder.to_filepath(a_hex)
-            dirpath = self.to_filepath(StoreAction.ADDRESS, a_hex)
-            fp = os.path.join(dirpath, '.start')
-            num = tx.block.number
-            num_compare = 0
-            try:
-                f = open(fp, 'rb')
-                r = f.read(8)
-                f.close()
-                num_compare = int.from_bytes(r, 'big')
-            except FileNotFoundError:
-                pass
-
-            if num_compare == 0 or num < num_compare:
-                logg.debug('recoding new start block {} for {}'.format(num, a))
-                num_bytes = num.to_bytes(8, 'big')
-                f = open(fp, 'wb')
-                f.write(num_bytes)
-                f.close()
-
-        if include_data:
-            src = json.dumps(tx.src).encode('utf-8')
-            #self.tx_dir.add(bytes.fromhex(strip_0x(tx.hash)), src)
-            self.add(StoreAction.TX, bytes.fromhex(strip_0x(tx.hash)), src)
-    
-            if tx.result != None:
-                rcpt_src = tx.result.src
-                rcpt_src = json.dumps(rcpt_src).encode('utf-8')
-                #self.rcpt_dir.add(bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
-                self.add(StoreAction.RCPT, bytes.fromhex(strip_0x(tx.hash)), rcpt_src)
-
+        super(FileStore, self).put_tx(tx, include_data=include_data) 
+        
 
 
     def put_block(self, block, include_data=False):

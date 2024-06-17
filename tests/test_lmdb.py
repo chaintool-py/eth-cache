@@ -1,5 +1,9 @@
 # standard imports
 import unittest
+import json
+
+# external imports
+from chainlib.eth.address import is_same_address
 
 # local imports
 from eth_cache.store.lmdb import LmdbStore
@@ -15,9 +19,9 @@ class TestCacheBasic(TestCache):
 
     def test_tx(self):
         self.store.put_tx(self.tx, include_data=True)
-        #j = self.store.get_tx(self.tx.hash)
-        #tx = json.loads(j)
-        #self.assertTrue(is_same_address(tx['hash'], self.tx.hash))
+        j = self.store.get_tx(self.tx.hash)
+        tx = json.loads(j)
+        self.assertTrue(is_same_address(tx['hash'], self.tx.hash))
 
 
 if __name__ == '__main__':
