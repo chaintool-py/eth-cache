@@ -5,12 +5,19 @@ import json
 # external imports
 from chainlib.eth.address import is_same_address
 from hexathon import strip_0x
+from chainlib.eth.gas import (
+        Gas,
+        OverrideGasOracle,
+        )
+from chainlib.eth.nonce import RPCNonceOracle
 from chainlib.eth.block import (
         block_by_hash,
         block_by_number,
+        Block,
         )
 from chainlib.eth.tx import (
         transaction,
+        Tx,
         )
 
 
@@ -46,7 +53,6 @@ class TestCacheBasic(TestCache):
         block_hash = strip_0x(self.block.hash)
         block_number = int(self.block.number)
         j = self.store.get_block_number(block_number)
-        print("foo {}".format(j))
         block = json.loads(j)
         retrieved_block_hash = strip_0x(block['hash'])
         self.assertEqual(retrieved_block_hash, block_hash)
@@ -75,6 +81,42 @@ class TestCacheBasic(TestCache):
         o = transaction(self.tx.hash)
         tx_src = self.rpc.do(o)
         self.assertTrue(is_same_address(tx_src['hash'], self.tx.hash))
+
+
+    def test_address(self):
+        nonce_oracle = RPCNonceOracle(self.accounts[2], self.rpc)
+        gas_oracle = OverrideGasOracle(price=100000000000, limit=30000)
+        c = Gas(self.chain_spec, signer=self.signer, nonce_oracle=nonce_oracle, gas_oracle=gas_oracle)
+        (tx_hash, o) = c.create(self.accounts[2], self.accounts[1], 1024)
+        r = self.rpc.do(o)
+        o = transaction(tx_hash)
+        tx_src = self.rpc.do(o)
+
+        o = block_by_hash(tx_src['block_hash'])
+        block_src = self.rpc.do(o)
+        block = Block(block_src)
+
+        tx = Tx(tx_src, block=block)
+        self.store.put_tx(tx, include_data=True)
+
+        nonce_oracle = RPCNonceOracle(self.accounts[1], self.rpc)
+        c = Gas(self.chain_spec, signer=self.signer, nonce_oracle=nonce_oracle, gas_oracle=gas_oracle)
+        (tx_hash, o) = c.create(self.accounts[1], self.accounts[0], 1024)
+        r = self.rpc.do(o)
+        o = transaction(tx_hash)
+        tx_src = self.rpc.do(o)
+
+        o = block_by_hash(tx_src['block_hash'])
+        block_src = self.rpc.do(o)
+        block = Block(block_src)
+
+        tx = Tx(tx_src, block=block)
+        self.store.put_tx(tx, include_data=True)
+
+        address = strip_0x(self.accounts[1])
+        # TODO: add test to limit iteration to within given address
+        txs = self.store.get_address_tx(address)
+        self.assertEqual(len(txs), 2)
 
 
 if __name__ == '__main__':
