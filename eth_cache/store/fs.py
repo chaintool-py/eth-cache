@@ -1,9 +1,11 @@
 # standard imports
 import os
+import json
 
 # local imports
 from eth_cache.store.base import Store
 from eth_cache.store.base import StoreAction
+from hexathon import strip_0x
 
 
 default_base_dir = '/var/lib'
@@ -13,8 +15,17 @@ def chain_dir_for(chain_spec, base_dir=default_base_dir):
     return os.path.join(chain_dir, 'eth_cache')
 
 
-
 class FsStore(Store):
+
+    def put_block(self, block, include_data=False):
+        hash_bytes = bytes.fromhex(strip_0x(block.hash))
+        self.add(StoreAction.BLOCK_NUM, block.number, hash_bytes)
+        num_bytes = block.number.to_bytes(8, 'big')
+        self.add(StoreAction.BLOCK_HASH, hash_bytes, num_bytes)
+        if include_data:
+            src = json.dumps(block.src).encode('utf-8')
+            self.add(StoreAction.BLOCK, hash_bytes, src)
+
 
     def __init__(self, chain_spec, cache_root=None, address_rules=None):
         if cache_root == None:

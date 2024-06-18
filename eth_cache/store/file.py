@@ -61,20 +61,6 @@ class FileStore(FsStore):
         super(FileStore, self).put_tx(tx, include_data=include_data) 
         
 
-
-    def put_block(self, block, include_data=False):
-        hash_bytes = bytes.fromhex(strip_0x(block.hash))
-        #self.block_num_dir.add(block.number, hash_bytes)
-        self.add(StoreAction.BLOCK_NUM, block.number, hash_bytes)
-        num_bytes = block.number.to_bytes(8, 'big')
-        #self.block_hash_dir.add(hash_bytes, num_bytes)
-        self.add(StoreAction.BLOCK_HASH, hash_bytes, num_bytes)
-        if include_data:
-            src = json.dumps(block.src).encode('utf-8')
-            #self.block_src_dir.add(hash_bytes, src)
-            self.add(StoreAction.BLOCK, hash_bytes, src)
-
-
     def get_block_number(self, block_number):
         #fp = self.block_num_dir.to_filepath(block_number)
         fp = self.to_filepath(StoreAction.BLOCK_NUM, block_number)

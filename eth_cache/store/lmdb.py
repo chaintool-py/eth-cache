@@ -19,8 +19,10 @@ logg = logging.getLogger(__name__)
 
 
 def to_path_key(path, k):
-    if type(k) != bytes:
+    if type(k) == str:
         k = k.encode('utf-8')
+    elif type(k) == int:
+        k = k.to_bytes(8, byteorder='big')
     if path[len(path)-1] != '/':
         path += '/'
     return path.encode('utf-8') + k
@@ -60,11 +62,33 @@ class LmdbStore(FsStore):
 
 
     def get_tx(self, tx_hash):
-        print("getting {}\n".format(tx_hash))
         k = bytes.fromhex(tx_hash)
-        k = to_path_key(StoreAction.TX.value, k) #self.adder[Store.ActionTX].get()
+        k = to_path_key(StoreAction.TX.value, k)
         with self.db.begin() as tx:
             return tx.get(k)
+
+
+    def get_rcpt(self, tx_hash):
+        k = bytes.fromhex(tx_hash)
+        k = to_path_key(StoreAction.RCPT.value, k)
+        with self.db.begin() as tx:
+            return tx.get(k)
+
+
+    def get_block(self, block_hash):
+        k = bytes.fromhex(block_hash)
+        k = to_path_key(StoreAction.BLOCK.value, k)
+        with self.db.begin() as tx:
+            return tx.get(k)
+
+
+    def get_block_number(self, block_number):
+        r = None
+        k = block_number.to_bytes(8, byteorder='big')
+        k = to_path_key(StoreAction.BLOCK_NUM.value, k)
+        with self.db.begin() as tx:
+            r = tx.get(k)
+        return self.get_block(r.hex())
 
 
     def put_address(self, tx, address):
