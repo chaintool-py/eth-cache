@@ -1,6 +1,7 @@
 # standard imports
 import unittest
 import json
+import logging
 
 # external imports
 from chainlib.eth.address import is_same_address
@@ -25,6 +26,9 @@ from chainlib.eth.tx import (
 from eth_cache.store.lmdb import LmdbStore
 from eth_cache.rpc import CacheRPC
 from tests.util import TestCache
+
+logging.basicConfig(level=logging.DEBUG)
+logg = logging.getLogger()
 
 
 class TestCacheBasic(TestCache):

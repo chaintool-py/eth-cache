@@ -36,7 +36,6 @@ class LmdbStoreAdder:
 
 
     def add(self, k, v):
-        print("adding {} {} {}\n".format(self.action, k, v))
         dbk = to_path_key(self.action.value, k)
         with self.db.begin(write=True) as dbtx:
             dbtx.put(dbk, v)
