@@ -55,17 +55,25 @@ class LmdbStore(FsStore):
 
 
     def get_tx(self, tx_hash):
+        tx = None
         k = bytes.fromhex(tx_hash)
         k = to_path_key(StoreAction.TX.value, k)
         with self.db.begin() as dbtx:
-            return dbtx.get(k)
+            tx = dbtx.get(k)
+        if tx == None:
+            raise FileNotFoundError(tx_hash)
+        return tx
 
 
     def get_rcpt(self, tx_hash):
+        rcpt = None
         k = bytes.fromhex(tx_hash)
         k = to_path_key(StoreAction.RCPT.value, k)
         with self.db.begin() as dbtx:
-            return dbtx.get(k)
+            rcpt = dbtx.get(k)
+        if rcpt == None:
+            raise FileNotFoundError(tx_hash)
+        return rcpt
 
 
     def get_block(self, block_hash):
@@ -76,12 +84,18 @@ class LmdbStore(FsStore):
 
 
     def get_block_number(self, block_number):
+        block =None
         r = None
         k = block_number.to_bytes(8, byteorder='big')
         k = to_path_key(StoreAction.BLOCK_NUM.value, k)
         with self.db.begin() as dbtx:
             r = dbtx.get(k)
-        return self.get_block(r.hex())
+        try:
+            block = self.get_block(r.hex())
+        except AttributeError:
+            raise FileNotFoundError(str(block_number))
+
+        return block
 
 
     def get_address_tx(self, address):
